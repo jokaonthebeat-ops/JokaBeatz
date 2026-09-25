@@ -1,0 +1,64 @@
+project_id = "sxykbgwwxkktrsnghyjp"
+
+[functions.generate-cover-art]
+verify_jwt = false
+
+[functions.generate-og-image]
+verify_jwt = false
+
+[functions.send-test-email]
+verify_jwt = false
+
+[functions.generate-email-variation]
+verify_jwt = false
+
+[functions.email-webhook]
+verify_jwt = false
+
+[functions.generate-blog-post]
+verify_jwt = false
+
+[functions.notify-video-ready]
+verify_jwt = false
+
+[functions.get-video-download]
+verify_jwt = false
+
+[functions.og-meta]
+verify_jwt = false
+
+[functions.auto-generate-blog]
+verify_jwt = false
+
+[functions.mastering-preview]
+verify_jwt = false
+
+[functions.mastering-checkout]
+verify_jwt = false
+
+[functions.mastering-retrieve]
+verify_jwt = false
+
+[functions.mastering-final]
+verify_jwt = false
+
+[functions.mastering-webhook]
+verify_jwt = false
+
+[functions.mastering-verify-payment]
+verify_jwt = false
+
+[functions.youtube-auth]
+verify_jwt = false
+
+[functions.youtube-oauth-callback]
+verify_jwt = false
+
+[functions.youtube-upload-init]
+verify_jwt = false
+
+[functions.youtube-upload-complete]
+verify_jwt = false
+
+[functions.generate-shorts-art]
+verify_jwt = false
