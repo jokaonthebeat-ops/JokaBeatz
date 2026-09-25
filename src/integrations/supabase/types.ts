@@ -70,12 +70,37 @@ export type Database = {
           },
         ]
       }
+      beat_license_deliverables: {
+        Row: {
+          license_id: string
+          paths: string[]
+          updated_at: string
+        }
+        Insert: {
+          license_id: string
+          paths?: string[]
+          updated_at?: string
+        }
+        Update: {
+          license_id?: string
+          paths?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_license_deliverables_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: true
+            referencedRelation: "beat_licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beat_licenses: {
         Row: {
           active: boolean
           beat_id: string
           created_at: string
-          deliverable_paths: string[]
           id: string
           price_cents: number
           stripe_price_id: string | null
@@ -87,7 +112,6 @@ export type Database = {
           active?: boolean
           beat_id: string
           created_at?: string
-          deliverable_paths?: string[]
           id?: string
           price_cents?: number
           stripe_price_id?: string | null
@@ -99,7 +123,6 @@ export type Database = {
           active?: boolean
           beat_id?: string
           created_at?: string
-          deliverable_paths?: string[]
           id?: string
           price_cents?: number
           stripe_price_id?: string | null

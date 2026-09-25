@@ -4,12 +4,19 @@ export const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
 export async function signBeatDeliverables(supabaseAdmin: any, beatId: string, tier: string) {
   const { data: license } = await supabaseAdmin
     .from("beat_licenses")
-    .select("deliverable_paths")
+    .select("id")
     .eq("beat_id", beatId)
     .eq("tier", tier)
     .maybeSingle();
+  if (!license) return [];
 
-  const paths: string[] = license?.deliverable_paths || [];
+  const { data: deliv } = await supabaseAdmin
+    .from("beat_license_deliverables")
+    .select("paths")
+    .eq("license_id", license.id)
+    .maybeSingle();
+
+  const paths: string[] = deliv?.paths || [];
   const files: { file_name: string; file_path: string }[] = [];
   for (const p of paths) {
     // External download link stored as "Label|https://..." (WAV / stems hosted elsewhere)

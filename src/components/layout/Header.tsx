@@ -14,6 +14,7 @@ const navLinks = [
   { name: "Shop", path: "/shop" },
   { name: "Music Videos", path: "/music-videos" },
   { name: "Free Beats", path: "/free-beats" },
+  { name: "Plugins", path: "/plugins" },
   { name: "Contact", path: "/contact" },
 ];
 

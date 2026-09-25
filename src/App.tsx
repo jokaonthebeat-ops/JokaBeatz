@@ -58,6 +58,7 @@ import Consultation from "./pages/services/Consultation";
 import AIMastering from "./pages/AIMastering";
 import AdminYouTubeUploader from "./pages/admin/AdminYouTubeUploader";
 import OAuthConsent from "./pages/OAuthConsent";
+import Plugins from "./pages/Plugins";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/beats" element={<Beats />} />
+              <Route path="/plugins" element={<Plugins />} />
               <Route path="/app/buy/:beatSlug" element={<AppBuyBeat />} />
               <Route path="/services" element={<Services />} />
               <Route path="/services/custom-beats" element={<CustomBeats />} />

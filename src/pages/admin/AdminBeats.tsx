@@ -54,6 +54,7 @@ type LicenseMap = Record<LicenseTier, LicenseForm>;
 
 const emptyBeat = {
   title: "",
+  slug: "",
   bpm: "",
   musical_key: "",
   genre: "",
@@ -182,6 +183,11 @@ const AdminBeats = () => {
   const openEdit = async (b: Beat) => {
     const defs = await fetchLicenseDefaults();
     const { data } = await supabase.from("beat_licenses").select("*").eq("beat_id", b.id);
+    const ids = (data || []).map((x) => x.id);
+    const { data: delivRows } = ids.length
+      ? await supabase.from("beat_license_deliverables").select("license_id, paths").in("license_id", ids)
+      : { data: [] as { license_id: string; paths: string[] }[] };
+    const delivMap = new Map((delivRows || []).map((d) => [d.license_id, d.paths || []]));
     const map = {} as LicenseMap;
     LICENSE_TIERS.forEach((t) => {
       const l = data?.find((x) => x.tier === t);
@@ -190,7 +196,7 @@ const AdminBeats = () => {
             id: l.id,
             price: (l.price_cents / 100).toFixed(2),
             stripe_price_id: l.stripe_price_id || "",
-            deliverable_paths: l.deliverable_paths || [],
+            deliverable_paths: delivMap.get(l.id) || [],
             terms_summary: l.terms_summary || "",
             active: l.active,
           }
@@ -199,6 +205,7 @@ const AdminBeats = () => {
     setEditingId(b.id);
     setForm({
       title: b.title,
+      slug: b.slug || "",
       bpm: b.bpm?.toString() || "",
       musical_key: b.musical_key || "",
       genre: b.genre || "",
@@ -231,12 +238,21 @@ const AdminBeats = () => {
 
   const save = async (status: "draft" | "published") => {
     if (!form.title.trim()) return toast.error("Title is required");
+    const slug = form.slug.trim();
+    if (slug) {
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return toast.error("Slug: use lowercase letters, numbers and single dashes only");
+      let q = supabase.from("beats").select("id").eq("slug", slug);
+      if (editingId) q = q.neq("id", editingId);
+      const { data: taken } = await q.limit(1);
+      if (taken && taken.length) return toast.error("That slug is already used by another beat");
+    }
     if (status === "published" && !form.preview_audio_path) return toast.error("Add a tagged preview MP3 before publishing");
     if (!licenses) return;
     setSaving(true);
     try {
       const payload = {
         title: form.title.trim(),
+        ...(slug ? { slug } : {}),
         bpm: form.bpm ? parseInt(form.bpm) : null,
         musical_key: form.musical_key || null,
         genre: form.genre || null,
@@ -263,12 +279,22 @@ const AdminBeats = () => {
         tier: t,
         price_cents: Math.round(Number(licenses[t].price || 0) * 100),
         stripe_price_id: licenses[t].stripe_price_id.trim() || null,
-        deliverable_paths: licenses[t].deliverable_paths,
         terms_summary: licenses[t].terms_summary || null,
         active: licenses[t].active,
       }));
-      const { error: lErr } = await supabase.from("beat_licenses").upsert(rows, { onConflict: "beat_id,tier" });
+      const { data: saved, error: lErr } = await supabase
+        .from("beat_licenses")
+        .upsert(rows, { onConflict: "beat_id,tier" })
+        .select("id, tier");
       if (lErr) throw lErr;
+      const delivRows = (saved || []).map((s) => ({
+        license_id: s.id,
+        paths: licenses[s.tier as LicenseTier].deliverable_paths,
+      }));
+      if (delivRows.length) {
+        const { error: dErr } = await supabase.from("beat_license_deliverables").upsert(delivRows, { onConflict: "license_id" });
+        if (dErr) throw dErr;
+      }
       toast.success(status === "published" ? "Beat published" : "Draft saved");
       setOpen(false);
       load();
@@ -281,8 +307,12 @@ const AdminBeats = () => {
 
   const remove = async (b: Beat) => {
     if (!confirm(`Delete "${b.title}"? This cannot be undone.`)) return;
-    const { data: lic } = await supabase.from("beat_licenses").select("deliverable_paths").eq("beat_id", b.id);
-    const paths = (lic || []).flatMap((l) => l.deliverable_paths || []).filter((p) => !isLinkEntry(p));
+    const { data: lic } = await supabase.from("beat_licenses").select("id").eq("beat_id", b.id);
+    const licIds = (lic || []).map((l) => l.id);
+    const { data: delivs } = licIds.length
+      ? await supabase.from("beat_license_deliverables").select("paths").in("license_id", licIds)
+      : { data: [] as { paths: string[] }[] };
+    const paths = (delivs || []).flatMap((d) => d.paths || []).filter((p) => !isLinkEntry(p));
     const { error } = await supabase.from("beats").delete().eq("id", b.id);
     if (error) return toast.error(error.message);
     if (paths.length) await supabase.storage.from(DELIVERABLES_BUCKET).remove(paths);
@@ -429,7 +459,15 @@ const AdminBeats = () => {
             <div className="md:col-span-2">
               <Label>Title *</Label>
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              <p className="text-xs text-muted-foreground mt-1">Slug: /{slugify(form.title) || "…"}</p>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Slug (optional)</Label>
+              <Input
+                placeholder={editingId ? "Leave as is to keep current slug" : slugify(form.title) || "auto-generated"}
+                value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lowercase letters, numbers and dashes. Leave blank to auto-generate. Never changes when you edit the title.</p>
             </div>
             <div><Label>BPM</Label><Input type="number" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} /></div>
             <div><Label>Key</Label><Input placeholder="F# minor" value={form.musical_key} onChange={(e) => setForm({ ...form, musical_key: e.target.value })} /></div>
